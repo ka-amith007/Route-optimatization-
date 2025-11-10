@@ -1,0 +1,48 @@
+# Python build/cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Environments
+.venv/
+venv/
+.env
+.env.*
+
+# VS Code
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs & temp
+*.log
+*.tmp
+temp_input.png
+
+# Data & results (uncomment if you want to exclude)
+# data/
+# results/
+
+# Model weights (if large, uncomment to exclude)
+# models/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+
+# Streamlit static cache
+.streamlit/
+
+# Archives
+*.zip
+
+# Images generated
+*.png
+*.jpg
+*.jpeg
+
+# Ignore everything in test_images except keep directory (optional)
+test_images/*
+!test_images/.keep
