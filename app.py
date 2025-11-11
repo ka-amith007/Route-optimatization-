@@ -6,6 +6,7 @@ import os
 import io
 import zipfile
 import matplotlib.pyplot as plt
+from PIL import ImageDraw
 
 # Add src to path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
@@ -18,27 +19,130 @@ from image_collection import SatelliteImageCollector
 
 st.set_page_config(
     page_title="AI Highway Route Planner",
-    page_icon="🛣️",
+    page_icon="�",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# ================= SAMPLE IMAGES =================
+def ensure_sample_images(n: int = 10, size: int = 256) -> list:
+    """Ensure at least n sample images exist in test_images and return their paths."""
+    samples_dir = os.path.join(os.path.dirname(__file__), 'test_images')
+    os.makedirs(samples_dir, exist_ok=True)
+    existing = [
+        os.path.join(samples_dir, f) for f in os.listdir(samples_dir)
+        if f.lower().endswith(('.png', '.jpg', '.jpeg')) and not f.startswith('.')
+    ]
+    needed = max(0, n - len(existing))
+    for i in range(needed):
+        idx = len(existing) + i + 1
+        img = generate_synthetic_image(idx, size)
+        out_path = os.path.join(samples_dir, f"sample_{idx:02d}.png")
+        img.save(out_path)
+        existing.append(out_path)
+    existing.sort()
+    return existing[:n]
+
+def generate_synthetic_image(seed: int, size: int = 256) -> Image.Image:
+    """Generate a synthetic satellite-like image for demo usage."""
+    rng = np.random.default_rng(seed)
+    img = Image.new('RGB', (size, size), (200, 200, 200))
+    draw = ImageDraw.Draw(img)
+    WATER = (30, 100, 200)
+    FOREST = (40, 140, 70)
+    URBAN = (160, 160, 160)
+    BARREN = (190, 170, 120)
+    ROAD = (10, 10, 10)
+    COLORS = [WATER, FOREST, URBAN, BARREN]
+    for _ in range(4):
+        x0 = int(rng.integers(0, size * 0.6))
+        y0 = int(rng.integers(0, size * 0.6))
+        x1 = int(rng.integers(x0 + size * 0.2, size))
+        y1 = int(rng.integers(y0 + size * 0.2, size))
+        color = COLORS[int(rng.integers(0, len(COLORS)))]
+        draw.rectangle([x0, y0, x1, y1], fill=color)
+    points = []
+    curx, cury = int(rng.integers(0, size//3)), int(rng.integers(0, size//3))
+    for _ in range(6):
+        dx = int(rng.integers(size//6, size//4))
+        dy = int(rng.integers(-size//6, size//6))
+        curx = min(max(curx + dx, 0), size-1)
+        cury = min(max(cury + dy, 0), size-1)
+        points.append((curx, cury))
+    if len(points) >= 2:
+        draw.line(points, fill=ROAD, width=max(2, size//60))
+    for _ in range(5):
+        cx = int(rng.integers(0, size))
+        cy = int(rng.integers(0, size))
+        r = int(rng.integers(size//20, size//10))
+        draw.ellipse([cx-r, cy-r, cx+r, cy+r], fill=WATER)
+    return img
+
+SAMPLE_IMAGE_PATHS = ensure_sample_images(n=10, size=256)
 
 # Custom CSS
 st.markdown("""
 <style>
     /* Global Styles */
     .stApp {
-        background: #0E1117;
+        background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
+        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+    
+    /* Professional Header */
+    .pro-header {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 25px 40px;
+        border-radius: 20px;
+        box-shadow: 0 10px 40px rgba(102, 126, 234, 0.3);
+        margin-bottom: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .logo-container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+    
+    .logo-icon {
+        font-size: 48px;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.3));
+    }
+    
+    .brand-name {
+        font-size: 38px;
+        font-weight: 800;
+        color: white;
+        letter-spacing: -0.5px;
+        text-shadow: 0 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .tagline {
+        text-align: center;
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 15px;
+        font-weight: 500;
+        margin-top: 5px;
     }
     
     /* Rounded Cards */
     .card {
-        background: linear-gradient(135deg, #1C1F26 0%, #252930 100%);
+        background: linear-gradient(135deg, #1e2139 0%, #2a2d4a 100%);
         padding: 30px;
-        border-radius: 16px;
-        box-shadow: 0px 4px 20px rgba(0,0,0,0.5);
-        border: 1px solid #2A2E37;
+        border-radius: 20px;
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(102, 126, 234, 0.2);
+        backdrop-filter: blur(10px);
         margin: 20px 0;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+    
+    .card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 48px rgba(102, 126, 234, 0.3);
     }
     
     /* Page Title */
@@ -79,11 +183,14 @@ st.markdown("""
         font-weight: 600;
         display: inline-block;
         margin-bottom: 15px;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            letter-spacing: 1px;
+            text-transform: uppercase;
     }
     
     /* Sidebar Styling */
     [data-testid="stSidebar"] {
-        background: linear-gradient(180deg, #1a1d24 0%, #13161c 100%);
+            background: linear-gradient(180deg, #1a1f3a 0%, #0a0e27 100%);
         border-right: 1px solid #2A2E37;
     }
     
@@ -100,52 +207,73 @@ st.markdown("""
         transition: all 0.3s;
         box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
         margin: 4px 0;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
     }
     
     .stButton>button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+            transform: translateY(-3px) scale(1.02);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.7);
         background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
     }
     
+        .stButton>button:active {
+            transform: translateY(-1px) scale(0.98);
+        }
+    
     /* Metrics */
     [data-testid="stMetricValue"] {
-        font-size: 28px;
-        color: #64B5F6;
-        font-weight: 700;
+           font-size: 32px;
+           background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+           -webkit-background-clip: text;
+           -webkit-text-fill-color: transparent;
+           background-clip: text;
+           font-weight: 800;
     }
     
     [data-testid="stMetricLabel"] {
-        color: #A0AEC0;
-        font-size: 14px;
+           color: #9CA3AF;
+           font-size: 13px;
+           text-transform: uppercase;
+           letter-spacing: 1px;
+           font-weight: 600;
     }
     
     /* Success/Info Messages */
     .stSuccess {
-        background: rgba(76, 175, 80, 0.1);
+           background: linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(76, 175, 80, 0.05) 100%);
         border-left: 4px solid #4CAF50;
-        border-radius: 8px;
-        padding: 12px;
+           border-radius: 12px;
+           padding: 16px;
+           font-weight: 500;
     }
     
     .stInfo {
-        background: rgba(33, 150, 243, 0.1);
+           background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(102, 126, 234, 0.05) 100%);
         border-left: 4px solid #2196F3;
-        border-radius: 8px;
-        padding: 12px;
+           border-radius: 12px;
+           padding: 16px;
+           font-weight: 500;
     }
     
     .stWarning {
-        background: rgba(255, 152, 0, 0.1);
+           background: linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 152, 0, 0.05) 100%);
         border-left: 4px solid #FF9800;
-        border-radius: 8px;
-        padding: 12px;
+           border-radius: 12px;
+           padding: 16px;
+           font-weight: 500;
     }
     
     /* Images */
     img {
-        border-radius: 12px;
-        box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+           border-radius: 16px;
+           box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+           border: 1px solid rgba(102, 126, 234, 0.2);
+           transition: transform 0.3s ease;
+        }
+    
+        img:hover {
+           transform: scale(1.02);
     }
     
     /* Download buttons */
@@ -183,6 +311,17 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Professional Header
+st.markdown("""
+<div class="pro-header">
+    <div class="logo-container">
+        <div class="logo-icon">🚀</div>
+        <div class="brand-name">AI ROUTE OPTIMIZER</div>
+    </div>
+    <div class="tagline">Advanced AI-Powered Highway Route Planning & Terrain Analysis Platform</div>
+</div>
+""", unsafe_allow_html=True)
+
 # Initialize session state
 if 'page' not in st.session_state:
     st.session_state.page = 'upload'
@@ -191,8 +330,13 @@ if 'original_image' not in st.session_state:
 
 # Sidebar Navigation
 with st.sidebar:
-    st.markdown("<h1 style='text-align: center; color: #64B5F6; font-size: 28px;'>🛣️ Route Planner</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; color: #718096; font-size: 13px; margin-bottom: 30px;'>AI-Powered Highway Optimization</p>", unsafe_allow_html=True)
+    st.markdown("""
+    <div style='text-align: center; margin-bottom: 25px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 15px;'>
+        <div style='font-size: 42px; margin-bottom: 10px;'>🚀</div>
+        <h1 style='color: white; font-size: 20px; font-weight: 700; margin: 0; letter-spacing: 1px;'>ROUTE OPTIMIZER</h1>
+        <p style='color: rgba(255,255,255,0.9); font-size: 11px; margin-top: 5px; font-weight: 500;'>AI-Powered Analysis</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("### 📍 Navigation")
     
@@ -218,6 +362,23 @@ with st.sidebar:
         </p>
     </div>
     """, unsafe_allow_html=True)
+
+    # Sample Images Gallery (more than 8 images)
+    st.markdown("### 🖼 Sample Images")
+    cols = st.columns(2)
+    for i, img_path in enumerate(SAMPLE_IMAGE_PATHS):
+        with cols[i % 2]:
+            st.image(img_path, caption=f"Sample {i+1}", width=120)
+            if st.button(f"Use {i+1}", key=f"use_sample_{i}"):
+                # Load and set as original image, jump to segmentation
+                try:
+                    img = Image.open(img_path)
+                    st.session_state.original_image = img
+                    st.session_state.page = 'segment'
+                    st.success(f"Loaded Sample {i+1}")
+                    st.experimental_rerun()
+                except Exception as e:
+                    st.warning(f"Could not load sample: {e}")
 
 # ============= PAGE: UPLOAD IMAGE =============
 if st.session_state.page == 'upload':
@@ -299,13 +460,11 @@ elif st.session_state.page == 'segment':
         
         st.markdown('<div class="card">', unsafe_allow_html=True)
         if st.button("🚀 Run Segmentation", use_container_width=True):
-            with st.spinner("🔄 Processing image... This may take a moment"):
-                segmenter = LandCoverSegmenter(method=method, model_path=model_path if model_path else None)
-                mask, colored_mask = segmenter.segment_image(np.array(st.session_state.original_image))
-                
-                st.session_state.segmentation_mask = mask
-                st.session_state.colored_segmentation = Image.fromarray(colored_mask)
+            segmenter = LandCoverSegmenter(method=method, model_path=model_path if model_path else None)
+            mask, colored_mask = segmenter.segment_image(np.array(st.session_state.original_image))
             
+            st.session_state.segmentation_mask = mask
+            st.session_state.colored_segmentation = Image.fromarray(colored_mask)
             st.success("✅ Segmentation completed successfully!")
         st.markdown("</div>", unsafe_allow_html=True)
         
@@ -398,12 +557,10 @@ elif st.session_state.page == 'cost':
         
         st.markdown('<div class="card">', unsafe_allow_html=True)
         if st.button("🚀 Generate Cost Map", use_container_width=True):
-            with st.spinner("🔄 Calculating terrain costs..."):
-                cost_gen = CostMapGenerator(terrain_costs=terrain_costs)
-                cost_map = cost_gen.generate_cost_map(st.session_state.segmentation_mask)
-                st.session_state.cost_map = cost_map
-                st.session_state.terrain_costs = terrain_costs
-            
+            cost_gen = CostMapGenerator(terrain_costs=terrain_costs)
+            cost_map = cost_gen.generate_cost_map(st.session_state.segmentation_mask)
+            st.session_state.cost_map = cost_map
+            st.session_state.terrain_costs = terrain_costs
             st.success("✅ Cost map generated successfully!")
         st.markdown("</div>", unsafe_allow_html=True)
         
@@ -484,31 +641,29 @@ elif st.session_state.page == 'route':
         
         st.markdown('<div class="card">', unsafe_allow_html=True)
         if st.button("🚀 Calculate Optimal Route", use_container_width=True):
-            with st.spinner("🔄 Finding optimal path using A* algorithm..."):
-                pathfinder = AStarPathfinder()
-                path = pathfinder.find_path(
-                    st.session_state.cost_map,
+            pathfinder = AStarPathfinder()
+            path = pathfinder.find_path(
+                st.session_state.cost_map,
+                (start_y, start_x),
+                (end_y, end_x)
+            )
+            
+            if path:
+                st.session_state.path = path
+                st.session_state.start_point = (start_y, start_x)
+                st.session_state.end_point = (end_y, end_x)
+                
+                visualizer = RouteVisualizer()
+                route_img = visualizer.visualize_route(
+                    np.array(st.session_state.original_image),
+                    path,
                     (start_y, start_x),
                     (end_y, end_x)
                 )
-                
-                if path:
-                    st.session_state.path = path
-                    st.session_state.start_point = (start_y, start_x)
-                    st.session_state.end_point = (end_y, end_x)
-                    
-                    visualizer = RouteVisualizer()
-                    route_img = visualizer.visualize_route(
-                        np.array(st.session_state.original_image),
-                        path,
-                        (start_y, start_x),
-                        (end_y, end_x)
-                    )
-                    st.session_state.route_image = Image.fromarray(route_img)
-                    
-                    st.success(f"✅ Optimal route found! Path length: {len(path)} pixels")
-                else:
-                    st.error("❌ No valid path found. Try different start/end points.")
+                st.session_state.route_image = Image.fromarray(route_img)
+                st.success(f"✅ Optimal route found! Path length: {len(path)} pixels")
+            else:
+                st.error("❌ No valid path found. Try different start/end points.")
         st.markdown("</div>", unsafe_allow_html=True)
         
         if 'route_image' in st.session_state:
