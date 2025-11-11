@@ -2,6 +2,11 @@
 
 A professional Streamlit dashboard that analyzes satellite imagery to generate optimal highway routes using land cover segmentation, terrain cost modeling, and A* pathfinding.
 
+## 🌐 Live Demo
+**Try it now:** [https://ai-route-optimizer.onrender.com](https://ai-route-optimizer.onrender.com)
+
+> **Note:** The app may take 30-60 seconds to wake up on first visit (free tier limitation)
+
 ## ✨ Features
 - 📤 Upload satellite imagery
 - 🔲 Land cover segmentation (rule-based placeholder)
